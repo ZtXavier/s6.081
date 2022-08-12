@@ -8,6 +8,13 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct sysinfo;
+
+
+
+
+int freemem_size(void);
+int nproc_size(void);
 
 // bio.c
 void            binit(void);
