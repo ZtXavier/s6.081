@@ -83,8 +83,12 @@ struct trapframe {
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
+// 这里是为每个进程维护一个结构体,保存每个进程
 struct proc {
   struct spinlock lock;
+
+  // lab3 为了进程在内核态下能够有专门的内核态的页表
+  pagetable_t kernel_pagetable;
 
   // p->lock must be held when using these:
   enum procstate state;        // Process state

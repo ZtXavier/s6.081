@@ -16,6 +16,7 @@
 #include "fs.h"
 #include "buf.h"
 #include "virtio.h"
+#include "proc.h"
 
 // the address of virtio mmio register r.
 #define R(r) ((volatile uint32 *)(VIRTIO0 + (r)))
@@ -247,10 +248,14 @@ virtio_disk_rw(struct buf *b, int write)
   disk.desc[idx[1]].next = idx[2];
 
   disk.info[idx[0]].status = 0xff; // device writes 0 on success
+  // 这里需要修改
   disk.desc[idx[2]].addr = (uint64) &disk.info[idx[0]].status;
+  // disk.desc[idx[2]].addr = (uint64)kvmpa((uint64)myproc()->kernel_pagetable);
   disk.desc[idx[2]].len = 1;
   disk.desc[idx[2]].flags = VRING_DESC_F_WRITE; // device writes the status
   disk.desc[idx[2]].next = 0;
+
+
 
   // record struct buf for virtio_disk_intr().
   b->disk = 1;

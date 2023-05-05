@@ -5,11 +5,47 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
  */
 pagetable_t kernel_pagetable;
+
+// lab3 p1
+// 第一行显示 vmprint 的参数,之后每个 PTE 都有一行，包括引用树中较深的页表页的 PTE  
+// 每个 PTE 行都缩进了一些“..”，表示它在树中的深度。  每个 PTE 行显示其页表页中的
+// PTE 索引、pte 位和从 PTE 中提取的物理地址。  不要打印无效的 PTE。  在上面的示例中
+// 顶层页表页具有条目 0 和 255 的映射。条目 0 的下一层仅映射索引 0，索引 0 的底层具有条目 0、1 和2 映射
+
+// 上面的要求和树有关,因为页表是多级的,所以需要构造一个递归的函数来实现
+void _vmprint(pagetable_t page, int level) {
+   // 这里的理解还是不够
+    for(int i = 0; i < 512; ++i) {
+       // 这里我们拿到每一个页表的内部所存储的值
+      pte_t pte = page[i];
+        // 这里根据freewalk函数学习是需要判断
+        // 首先判断是否是有效的
+        if((pte & PTE_V) ) {
+          // 如果有效,则根据页表的level来打印 .. 符号的个数
+            printf("..");
+          for(int j = 0; j < level; ++j) {
+            printf(" ..");
+          }
+          uint64 pa = PTE2PA(pte);
+          printf("%d: pte %p pa %p\n", i, pte, pa);
+
+          if((pte & (PTE_R | PTE_W | PTE_X)) == 0)
+          _vmprint((pagetable_t)pa, level + 1);
+        }
+    }
+}
+
+void vmprint(pagetable_t  page) {
+  printf("page table %p\n", page);
+  _vmprint(page,  0);
+}
 
 extern char etext[];  // kernel.ld sets this to end of kernel code.
 
@@ -54,6 +90,7 @@ void
 kvminit(void)
 {
   kernel_pagetable = kvmmake();
+  kvmmap(kernel_pagetable, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
 }
 
 // Switch h/w page table register to the kernel's page table,
@@ -65,9 +102,53 @@ kvminithart()
   sfence_vma();
 }
 
+
+void
+proc_kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm)
+{
+  if(mappages(kpgtbl, va, sz, pa, perm) != 0)
+    panic("kvmmap");
+}
+
+pagetable_t
+proc_kvmmake(void)
+{
+  pagetable_t kpgtbl;
+
+  kpgtbl = (pagetable_t) kalloc();
+  memset(kpgtbl, 0, PGSIZE);
+
+  // uart registers
+  proc_kvmmap(kpgtbl, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+
+  // virtio mmio disk interface
+  proc_kvmmap(kpgtbl, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+
+  // PLIC
+  proc_kvmmap(kpgtbl, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+  
+  // CLINT
+  proc_kvmmap(kpgtbl, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+
+  // map kernel text executable and read-only.
+  proc_kvmmap(kpgtbl, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+
+  // map kernel data and the physical RAM we'll make use of.
+  proc_kvmmap(kpgtbl, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  proc_kvmmap(kpgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+
+  return kpgtbl;
+}
+
 // Return the address of the PTE in page table pagetable
 // that corresponds to virtual address va.  If alloc!=0,
 // create any required page-table pages.
+//  返回PTE在页表pagetable中的地址
+// 对应于虚拟地址 va。如果分配！=0，
+// 创建任何需要的页表页面
 //
 // The risc-v Sv39 scheme has three levels of page-table
 // pages. A page-table page contains 512 64-bit PTEs.
@@ -128,6 +209,30 @@ kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm)
 {
   if(mappages(kpgtbl, va, sz, pa, perm) != 0)
     panic("kvmmap");
+}
+
+
+// translate a kernel virtual address to
+// a physical address. only needed for
+// addresses on the stack.
+// assumes va is page aligned.
+uint64
+kvmpa(uint64 va)
+{
+  uint64 off = va % PGSIZE;
+  pte_t *pte;
+  uint64 pa;
+
+  // 使用用户进程自己的内核页表地址来翻译虚拟地址
+  struct proc *p = myproc();
+  pte = walk(p->kernel_pagetable, va, 0);
+ 
+  if(pte == 0)
+    panic("kvmpa");
+  if((*pte & PTE_V) == 0)
+    panic("kvmpa");
+  pa = PTE2PA(*pte);
+  return pa+off;
 }
 
 // Create PTEs for virtual addresses starting at va that refer to
