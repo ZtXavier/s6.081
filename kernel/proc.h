@@ -87,16 +87,15 @@ enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 struct proc {
   struct spinlock lock;
 
-  // lab3 为了进程在内核态下能够有专门的内核态的页表
-  pagetable_t kernel_pagetable;
-
   // p->lock must be held when using these:
   enum procstate state;        // Process state
   void *chan;                  // If non-zero, sleeping on chan
   int killed;                  // If non-zero, have been killed
   int xstate;                  // Exit status to be returned to parent's wait
   int pid;                     // Process ID
-
+  int mask;
+  uint64 freemem;
+  uint64 nproc;
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process
 
@@ -109,4 +108,5 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  struct usyscall *usyscall;
 };

@@ -343,7 +343,8 @@ sfence_vma()
 #define PTE_W (1L << 2)
 #define PTE_X (1L << 3)
 #define PTE_U (1L << 4) // 1 -> user can access
-
+#define PTE_A (1L << 6) // 对访问位的支持
+#define MAXSCAN 32    // 最多查询页面的数量
 
 // 注意:这里需要使用这里的宏定义来实现打印结果
 // shift a physical address to the right place for a PTE.

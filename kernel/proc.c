@@ -52,10 +52,8 @@ procinit(void)
   initlock(&wait_lock, "wait_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
-      // p->kstack = KSTACK((int) (p - proc));
+      p->kstack = KSTACK((int) (p - proc));
   }
-
-  kvminithart();
 }
 
 // Must be called with interrupts disabled,
@@ -129,6 +127,14 @@ found:
     return 0;
   }
 
+// lab3 part1
+  if((p->usyscall = (struct usyscall *)kalloc()) == 0) {
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+  p->usyscall->pid = p->pid;
+
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
   if(p->pagetable == 0){
@@ -136,23 +142,6 @@ found:
     release(&p->lock);
     return 0;
   }
-  //lab3
-  //为进程创建独立的内核页表,并将内核所需要的
-  // 各种映射添加到新的页表上去
-  p->kernel_pagetable = proc_kvmmake();
-  if(p->kernel_pagetable == 0) {
-    freeproc(p);
-    release(&p->lock);
-    return 0;
-  }
-  // 这里需要我们分配一个物理页来作为新的进程使用
-  char *pa = kalloc();
-  if(pa == 0) {
-    panic("kalloc");
-  }
-  uint64 va = KSTACK((int)0);
-  proc_kvmmap(p->kernel_pagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
-  p->kstack = va;
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
@@ -172,20 +161,15 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
-  // 删除内核栈
-  if(p->kstack) {
-    // 通过页表地址， kstack虚拟地址 找到最后一级的页表项
-    pte_t *pte = walk(p->kernel_pagetable, p->kstack, 0);
-    if(pte == 0) {
-      panic("freeproc:kstack");
-    }
-    kfree((void*)PTE2PA(*pte));
+  
+  //lab3 part1
+  if(p->usyscall) {
+    kfree((void*)p->usyscall);
+    p->usyscall = 0;
   }
+
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
-  if(p->kernel_pagetable) {
-    kvmfreepg(p->kernel_pagetable);
-  }
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -194,7 +178,6 @@ freeproc(struct proc *p)
   p->chan = 0;
   p->killed = 0;
   p->xstate = 0;
-  p->kernel_pagetable = 0;
   p->state = UNUSED;
 }
 
@@ -228,6 +211,16 @@ proc_pagetable(struct proc *p)
     return 0;
   }
 
+//  在上面的映射条件下,我们加入映射USYSCALL
+// 如果映射失败,则将解除之前映射的关系
+   if(mappages(pagetable, USYSCALL, PGSIZE,
+              (uint64)(p->usyscall), PTE_R | PTE_U) < 0){
+    uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+     uvmunmap(pagetable, TRAPFRAME, 1, 0);
+    uvmfree(pagetable, 0);
+    return 0;
+  }
+
   return pagetable;
 }
 
@@ -238,6 +231,7 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
+  uvmunmap(pagetable, USYSCALL, 1, 0);
   uvmfree(pagetable, sz);
 }
 
@@ -320,6 +314,7 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
+  np->mask = p->mask;
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
@@ -334,7 +329,6 @@ fork(void)
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
-
   pid = np->pid;
 
   release(&np->lock);
@@ -476,6 +470,7 @@ scheduler(void)
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
+
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
@@ -484,20 +479,11 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
-
-        // 切换到进程的独立内核页表
-        w_satp(MAKE_SATP(p->kernel_pagetable));
-        // 清除快表缓存
-        sfence_vma();
-
         swtch(&c->context, &p->context);
 
-        // 切换回全局内核页表
-        kvminithart();
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
-
       }
       release(&p->lock);
     }
@@ -695,19 +681,16 @@ procdump(void)
   }
 }
 
-void 
-kvmfreepg(pagetable_t pagetable){
-  for (int i = 0; i < 512; ++i) {
-    pte_t pte = pagetable[i];
-    if ((pte & PTE_V)) {
-      pagetable[i] = 0;
-      if ((pte & (PTE_R | PTE_W | PTE_X)) == 0) {
-        uint64 child = PTE2PA(pte);
-       kvmfreepg((pagetable_t)child);
-      }
-    } else if (pte & PTE_V) {
-      panic("proc free kernelpagetable : leaf");
+int 
+nproc_size(void)
+{
+  int num = 0;
+  for(int i = 0;i < NPROC;i++)
+  {
+    if(proc[i].state != UNUSED)
+    {
+      ++num;
     }
   }
-  kfree((void*)pagetable);
+  return num;
 }
