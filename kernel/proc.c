@@ -140,7 +140,11 @@ found:
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
-
+// lab4 给每个进程初始化
+  p->interval = 0;
+  p->handler = 0;
+  p->passedtimer = 0;
+  p->trapframecp = 0;
   return p;
 }
 

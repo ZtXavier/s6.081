@@ -331,6 +331,17 @@ sfence_vma()
   asm volatile("sfence.vma zero, zero");
 }
 
+// https://blog.csdn.net/robbie1314/article/details/6329329?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522168419712216800197053268%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&request_id=168419712216800197053268&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduend~default-1-6329329-null-null.142^v87^insert_down1,239^v2^insert_chatgpt&utm_term=asm%20volatile&spm=1018.2226.3001.4187
+// 具体汇编指令可以参考该博客
+// 获取栈帧的函数
+static inline uint64 
+r_fp() 
+{
+  uint64 x;
+  asm volatile("mv %0, s0" : "=r" (x) );
+  return x;
+}
+
 
 #define PGSIZE 4096 // bytes per page
 #define PGSHIFT 12  // bits of offset within a page

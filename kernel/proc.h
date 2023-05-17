@@ -105,4 +105,13 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  // lab4 -3
+  int interval; // 设置的时间周期
+  uint64 handler; // 记录时间的函数调用地址
+  int passedtimer; // 经过的时间
+   // 由于原来的代码中a0 保存了系统调用的函数地址
+  // 那么在中断过程中寄存器中a0 我们尝试保存了中
+  // 断处理程序,但是这样会覆盖原来的函数地址
+  // 所以我们将做一个拷贝
+   struct trapframe *trapframecp;
 };

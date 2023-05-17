@@ -76,9 +76,21 @@ usertrap(void)
   if(p->killed)
     exit(-1);
 
+if(which_dev == 2) {
+    // lab4
+    // 这里需要知道,每个p结构体kernel为其分配了4096的大小
+    if(p->interval != 0 && ++p->passedtimer == p->interval) {
+      // 做一个副本
+      p->trapframecp = p->trapframe + 512;
+      memmove(p->trapframecp, p->trapframe, sizeof(struct trapframe));
+      p->trapframe->epc = p->handler;  // 用来记录保存的中断处理函数的地址
+    }
+}
+
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2) {
     yield();
+  }
 
   usertrapret();
 }
