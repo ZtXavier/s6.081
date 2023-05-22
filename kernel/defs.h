@@ -9,6 +9,7 @@ struct sleeplock;
 struct stat;
 struct superblock;
 
+ 
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -63,6 +64,8 @@ void            ramdiskrw(struct buf*);
 void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
+int             cowcheck(pagetable_t, uint64);
+void           inc_page_num(uint64);
 
 // log.c
 void            initlog(int, struct superblock*);
@@ -171,6 +174,7 @@ int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 
+pte_t  *    walk(pagetable_t, uint64, int);
 // plic.c
 void            plicinit(void);
 void            plicinithart(void);

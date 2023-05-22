@@ -1,0 +1,17 @@
+{
+    "files.associations": {
+        "riscv.h": "c",
+        "defs.h": "c",
+        "condition_variable": "c",
+        "*.tcc": "c",
+        "fstream": "c",
+        "mutex": "c",
+        "ostream": "c",
+        "shared_mutex": "c",
+        "stop_token": "c",
+        "types.h": "c",
+        "param.h": "c",
+        "memlayout.h": "c",
+        "spinlock.h": "c"
+    }
+}

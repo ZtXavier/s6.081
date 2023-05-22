@@ -11,6 +11,7 @@ uint ticks;
 
 extern char trampoline[], uservec[], userret[];
 
+
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
 
@@ -67,6 +68,17 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
+  } else if(r_scause() == 13 || r_scause() == 15) {
+    // 如果是触发了缺页异常的情况
+    // 这里的方案是内存页的懒分配
+    // 如果需要该内存,我们先不分配
+    // 当访问该内存时我们在进行分配
+      struct proc *p = myproc();
+    // r_stval()其实是获取寄存器中存取的虚拟地址的值
+      if(cowcheck(p->pagetable, r_stval()) < 0) {
+        p->killed = 1;
+        exit(-1);
+      }
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
