@@ -1,0 +1,141 @@
+The target architecture is set to "riscv:rv64".
+warning: No executable has been specified and target does not support
+determining executable automatically.  Try using the "file" command.
+0x0000000000001000 in ?? ()
+Reading symbols from user/_uthread...
+Breakpoint 1 at 0x26: file user/uthread.c, line 63.
+The "remote" target does not support "run".  Try "help target" or "continue".
+Continuing.
+
+Breakpoint 1, thread_schedule () at user/uthread.c:63
+63	{
+0x0000000000000028 in thread_schedule () at user/uthread.c:63
+63	{
+0x000000000000002c	63	{
+malloc (nbytes=<optimized out>) at user/umalloc.c:86
+86	    if(p == freep)
+0x0000000000000be2	86	    if(p == freep)
+0x0000000000000be4	86	    if(p == freep)
+0x0000000000000be6 in malloc (nbytes=<optimized out>) at user/umalloc.c:86
+86	    if(p == freep)
+0x0000000000000be8	86	    if(p == freep)
+morecore (nu=5296) at user/umalloc.c:54
+54	  p = sbrk(nu * sizeof(Header));
+0x0000000000000bec	54	  p = sbrk(nu * sizeof(Header));
+0x0000000000000bee	54	  p = sbrk(nu * sizeof(Header));
+0x0000000000000bf2	54	  p = sbrk(nu * sizeof(Header));
+0x0000000000000bf6	55	  if(p == (char*)-1)
+0x0000000000000bf8 in malloc (nbytes=<optimized out>) at user/umalloc.c:88
+88	        return 0;
+0x0000000000000bf2 in morecore (nu=5296) at user/umalloc.c:54
+54	  p = sbrk(nu * sizeof(Header));
+0x0000000000000bf6	55	  if(p == (char*)-1)
+0x0000000000000bf8 in malloc (nbytes=<optimized out>) at user/umalloc.c:88
+88	        return 0;
+0x0000000000000bf2 in morecore (nu=5296) at user/umalloc.c:54
+54	  p = sbrk(nu * sizeof(Header));
+0x0000000000000bf6	55	  if(p == (char*)-1)
+0x0000000000000bf8 in malloc (nbytes=<optimized out>) at user/umalloc.c:88
+88	        return 0;
+Undefined command: "su".  Try "help".
+0x0000000000000bf2 in morecore (nu=5296) at user/umalloc.c:54
+54	  p = sbrk(nu * sizeof(Header));
+0x0000000000000bf6	55	  if(p == (char*)-1)
+0x0000000000000bf8 in malloc (nbytes=<optimized out>) at user/umalloc.c:88
+88	        return 0;
+0x0000000000000bf2 in morecore (nu=5296) at user/umalloc.c:54
+54	  p = sbrk(nu * sizeof(Header));
+Detaching from program: /home/zt/s6.081/xv6-labs-2021/user/_uthread, process 1
+Ending remote debugging.
+[Inferior 1 (process 1) detached]
+The target architecture is set to "riscv:rv64".
+warning: No executable has been specified and target does not support
+determining executable automatically.  Try using the "file" command.
+0x0000000000001000 in ?? ()
+Reading symbols from user/_uthread...
+Breakpoint 1 at 0x26: file user/uthread.c, line 63.
+Continuing.
+
+Breakpoint 1, thread_schedule () at user/uthread.c:63
+63	{
+value has been optimized out
+value has been optimized out
+Breakpoint 2 at 0x420: file user/uthread_switch.S, line 13.
+Continuing.
+Disconnected from target.
+The target architecture is set to "riscv:rv64".
+warning: No executable has been specified and target does not support
+determining executable automatically.  Try using the "file" command.
+0x0000000000001000 in ?? ()
+Reading symbols from user/_uthread...
+Breakpoint 1 at 0x26: file user/uthread.c, line 63.
+No symbol "next_thread" in current context.
+The "remote" target does not support "run".  Try "help target" or "continue".
+The "remote" target does not support "run".  Try "help target" or "continue".
+The "remote" target does not support "run".  Try "help target" or "continue".
+The "remote" target does not support "run".  Try "help target" or "continue".
+The "remote" target does not support "run".  Try "help target" or "continue".
+The "remote" target does not support "run".  Try "help target" or "continue".
+Continuing.
+
+Breakpoint 1, thread_schedule () at user/uthread.c:63
+63	{
+value has been optimized out
+The history is empty.
+value has been optimized out
+value has been optimized out
+Argument required (starting display address).
+value has been optimized out
+The history is empty.
+Argument required (starting display address).
+Num     Type           Disp Enb Address            What
+1       breakpoint     keep y   0x0000000000000026 in thread_schedule at user/uthread.c:63
+	breakpoint already hit 1 time
+58	  current_thread->state = RUNNING;
+59	}
+60	
+61	void 
+62	thread_schedule(void)
+63	{
+64	  struct thread *t, *next_thread;
+65	
+66	  /* Find another runnable thread. */
+67	  next_thread = 0;
+malloc (nbytes=<optimized out>) at user/umalloc.c:86
+86	    if(p == freep)
+81	        p->s.size = nunits;
+82	      }
+83	      freep = prevp;
+84	      return (void*)(p + 1);
+85	    }
+86	    if(p == freep)
+87	      if((p = morecore(nunits)) == 0)
+88	        return 0;
+89	  }
+90	}
+The history is empty.
+No symbol "next_thread" in current context.
+Line number 91 out of range; user/umalloc.c has 90 lines.
+Line number 91 out of range; user/umalloc.c has 90 lines.
+malloc (nbytes=<optimized out>) at user/umalloc.c:87
+87	      if((p = morecore(nunits)) == 0)
+82	      }
+83	      freep = prevp;
+84	      return (void*)(p + 1);
+85	    }
+86	    if(p == freep)
+87	      if((p = morecore(nunits)) == 0)
+88	        return 0;
+89	  }
+90	}
+0x0000000000000bfc in ?? ()
+=> 0x0000000000000bfc:	6422              	ld	s0,8(sp)
+Line number 91 out of range; user/umalloc.c has 90 lines.
+Cannot find bounds of current function
+Cannot find bounds of current function
+Cannot find bounds of current function
+Cannot find bounds of current function
+Cannot find bounds of current function
+Cannot find bounds of current function
+Continuing.
+Disconnected from target.

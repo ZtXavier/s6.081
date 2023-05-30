@@ -10,11 +10,35 @@
 #define STACK_SIZE  8192
 #define MAX_THREAD  4
 
+// 这里添加线程切换时需要保存数据的寄存器
+struct thread_context {
+  // 栈帧的栈顶栈底指针
+  uint64 ra;
+  uint64 sp;
+
+  // callee saved
+  uint64 s0;
+  uint64 s1;
+  uint64 s2;
+  uint64 s3;
+  uint64 s4;
+  uint64 s5;
+  uint64 s6;
+  uint64 s7;
+  uint64 s8;
+  uint64 s9;
+  uint64 s10;
+  uint64 s11;
+};
 
 struct thread {
+  // 这里我们需要补充一个结构体
+  struct thread_context ctx;
+  // 每一个线程都有一个stack线程栈
   char       stack[STACK_SIZE]; /* the thread's stack */
   int        state;             /* FREE, RUNNING, RUNNABLE */
 };
+// 全局变量,设置线程的数量
 struct thread all_thread[MAX_THREAD];
 struct thread *current_thread;
 extern void thread_switch(uint64, uint64);
@@ -27,7 +51,10 @@ thread_init(void)
   // save thread 0's state.  thread_schedule() won't run the main thread ever
   // again, because its state is set to RUNNING, and thread_schedule() selects
   // a RUNNABLE thread.
+  // 线程是维护了一个线程的数组,初始化的话
+  // 就指针指向第一个线程
   current_thread = &all_thread[0];
+  // 这里设置了线程的执行状态,和进程相似
   current_thread->state = RUNNING;
 }
 
@@ -62,6 +89,11 @@ thread_schedule(void)
      * Invoke thread_switch to switch from t to next_thread:
      * thread_switch(??, ??);
      */
+    if(t != &all_thread[0] && t->state != FREE) {
+      t->state = RUNNABLE;
+    }
+    // 线程的调度,从当前的线程 t 调度到 next_thread
+    thread_switch(&(t->ctx),&(current_thread->ctx));
   } else
     next_thread = 0;
 }
@@ -75,7 +107,13 @@ thread_create(void (*func)())
     if (t->state == FREE) break;
   }
   t->state = RUNNABLE;
-  // YOUR CODE HERE
+  // YOUR CODE HERE lab6
+  // 栈顶
+  t->ctx.sp = (uint64)t->stack + STACK_SIZE;
+  // 栈底
+  // 指向的是要处理的函数的地址
+  t->ctx.ra = (uint64)func;
+
 }
 
 void 
