@@ -1,0 +1,3 @@
+Q: Why are there missing keys with 2 threads, but not with 1 thread? Identify a sequence of events with 2 threads that can lead to a key being missing. 
+A: 因为多线程环境下,会有两个或多个线程同时执行insert函数而造成的
+传递的参数key等等的值的覆盖,所以会造成key的missing.
