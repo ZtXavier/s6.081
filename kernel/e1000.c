@@ -92,6 +92,10 @@ e1000_init(uint32 *xregs)
   regs[E1000_IMS] = (1 << 7); // RXDW -- Receiver Descriptor Write Back
 }
 
+ //发包：
+// 当network stackk需要发送一个packet的时候，会先将这个packet存放到发送环形缓冲区tx_ring，最后通过网卡将这个packet发送出去。
+// （每次发送packet前都需要检查一下上一次的packet发送完没，如果发送完了，要将其的释放掉）
+
 int
 e1000_transmit(struct mbuf *m)
 {
@@ -102,7 +106,31 @@ e1000_transmit(struct mbuf *m)
   // the TX descriptor ring so that the e1000 sends it. Stash
   // a pointer so that it can be freed after sending.
   //
-  
+  // 需要設置DDbit 和 EOP bit
+  // 所以这里需要加上锁,防止多线程使数据混乱
+  acquire(&e1000_lock);
+  uint32 tail = regs[E1000_TDT];
+  // 如果用 E1000_TDT 索引到的 tx_ring 的元素的 E1000_TXD_STAT_DD 
+  // 位没被设置，那么此descriptor的传输尚未结束，需要返回-1
+  if((tx_ring[tail].status & E1000_TXD_STAT_DD) == 0) {
+    release(&e1000_lock);
+    return -1;
+  }
+  // 如果这里网络包响应了
+  if(tx_mbufs[tail]) {
+    mbuffree(tx_mbufs[tail]);
+  }
+
+  tx_mbufs[tail] = m;
+  // 这里需要做一次清空操作
+  memset(&tx_ring[tail], 0, sizeof(tx_ring[tail]));
+  tx_ring[tail].addr = (uint64)m->head;
+  tx_ring[tail].length = m->len;
+  tx_ring[tail].cmd = (E1000_TXD_CMD_EOP | E1000_TXD_CMD_RS);
+
+  regs[E1000_TDT] = (tail + 1) % TX_RING_SIZE;
+  release(&e1000_lock);
+
   return 0;
 }
 
@@ -115,6 +143,25 @@ e1000_recv(void)
   // Check for packets that have arrived from the e1000
   // Create and deliver an mbuf for each packet (using net_rx()).
   //
+  // E1000_TDT 存的是 tx_ring 中下一可用位置的索引
+  while(1) {
+    uint32 tail = (regs[E1000_RDT] + 1) % RX_RING_SIZE;
+
+    if((rx_ring[tail].status & E1000_RXD_STAT_DD) == 0) {
+      return;
+    }
+
+    // 读取数据
+    rx_mbufs[tail]->len = rx_ring[tail].length;
+    net_rx(rx_mbufs[tail]);
+    struct mbuf* m = mbufalloc(0);
+
+    rx_ring[tail].addr = (uint64)m->head;
+    rx_ring[tail].status = 0;
+    rx_mbufs[tail] = m;
+
+    regs[E1000_RDT] = tail;
+  }
 }
 
 void
